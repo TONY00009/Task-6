@@ -1,0 +1,129 @@
+#loading pre-trained face detecting model
+import cv2
+import numpy as np
+face_det = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+
+#Activating my webcam
+cap = cv2.VideoCapture(0)  
+
+#defining a function to detect and extract cropped faces
+def face_detect(image):
+    img_gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+    img = face_det.detectMultiScale(img_gray, 1.3, 5) 
+    
+    
+    if img is ():
+        return None
+    
+    for (x,y,w,h) in img:
+        crop_face = image[y:y+h, x:x+w]
+    
+    return crop_face
+  
+#Creating dataset for training model for face detection
+i=0
+Training_Data, Labels = [], []
+while i<150:
+    ret, photo = cap.read()
+    if face_detect(photo) is not None:
+        face = cv2.resize(face_detect(photo),(200, 200))
+        face = cv2.cvtColor(face,cv2.COLOR_BGR2GRAY)
+        
+        Training_Data.append(np.asarray(face, dtype=np.uint8))
+        Labels.append(i)
+        i += 1
+        
+       
+        
+        #displaying the dataset
+        cv2.putText(face, str(i), (50, 50), cv2.FONT_HERSHEY_PLAIN, 1, (0,255,0), 2)
+        cv2.imshow('Gathering Training Data', face)
+    else:
+        print("No face found")
+        pass
+    if cv2.waitKey(1)==13:
+        break
+cap.release()
+cv2.destroyAllWindows()
+Labels = np.asarray(Labels, dtype=np.int32)
+print("Dataset Generated")
+    
+        
+
+
+
+
+model = cv2.face_LBPHFaceRecognizer.create() 
+model.train(np.asarray(Training_Data), np.asarray(Labels))
+print("Model trained sucessefully")
+
+
+
+
+
+
+
+
+#Testing face recognition model 
+import os
+import pywhatkit as bot
+def face_detector(img, size=0.5):
+    
+    # Convert image to grayscale
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    faces = face_det.detectMultiScale(gray, 1.3, 5)
+    if faces is ():
+        return img, []
+    
+    
+    for (x,y,w,h) in faces:
+        cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,255),2)
+        roi = img[y:y+h, x:x+w]
+        roi = cv2.resize(roi, (200, 200))
+    return img, roi
+
+
+# Open Webcam
+cap = cv2.VideoCapture(0)
+
+while True:
+
+    ret, frame = cap.read()
+    image, face = face_detector(frame)
+    try:
+        face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+
+        results = model.predict(face)
+        
+        if results[1] < 500:
+            confidence = int( 100 * (1 - (results[1])/400) )
+            disp_text = str(confidence) + '% Confident it is User'
+            
+        cv2.putText(image, disp_text, (100, 120), cv2.FONT_HERSHEY_COMPLEX, 1, (255,100,100), 2)
+        
+        if confidence > 85:
+            cv2.putText(image, "Mayank oye !", (250, 450), cv2.FONT_HERSHEY_COMPLEX, 1, (0,100,255), 2)
+            cv2.imshow('Face Recognition', image )
+        
+        else:
+            cv2.putText(image, "Wait a minute, Who are you ?", (250, 450), cv2.FONT_HERSHEY_COMPLEX, 1, (0,100,255), 2)
+            cv2.imshow('Face Recognition', image )
+
+    except:
+        cv2.putText(image, "No Face Detected", (220, 120) , cv2.FONT_HERSHEY_COMPLEX, 1, (0,111,255), 2)
+        cv2.putText(image, "Looking for a face", (250, 450), cv2.FONT_HERSHEY_COMPLEX, 1, (0,100,255), 2)
+        cv2.imshow('Face Recognition', image )
+        pass
+        
+    if cv2.waitKey(1) == 13:
+        break
+    
+        
+cap.release()
+cv2.destroyAllWindows()  
+
+#Sending an Email Alert
+if confidence>85:
+    bot.sendwhatmsg_instantly("+91 88948 40169" , "it worked!")
+    bot.send_mail("mayanksharma5191@gmail.com","aqbo arpa yart kxvc", "what should i write here","Mail send ho gyi oye !! ","mayank.sharma30092000@gmail.com")
+    print("E-Mail sent successfully")
